@@ -28,7 +28,7 @@ public class AuthController : ControllerBase
         if (!ValidatePassword(dto.Password)) return BadRequest("Password is not strong enough!");
 
         //Connection to SQLite database
-        using var con = new SqliteConnection(_ConString.Sqlite);
+        using var con = new SqliteConnection(_ConString.DefaultConnection);
         con.Open();
 
         // Checking if the username already exists or not
@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public IActionResult Login([FromBody] LoginDto dto)
     {
-        using var con = new SqliteConnection(_ConString.Sqlite);
+        using var con = new SqliteConnection(_ConString.DefaultConnection);
         con.Open();
         using var cmd = con.CreateCommand();
 
