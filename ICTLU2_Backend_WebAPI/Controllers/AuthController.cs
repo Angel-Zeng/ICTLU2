@@ -13,91 +13,57 @@ namespace ICTLU2_Backend_WebAPI.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly ConnectionStrings _conString;
-    private readonly IConfiguration _config;
-
-    public AuthController(ConnectionStrings cs, IConfiguration cfg)
-    {
-        _conString = cs;
-        _config = cfg;
-    }
+    private readonly ConnectionStrings _cs;
+    private readonly IConfiguration _cfg;
+    public AuthController(ConnectionStrings cs, IConfiguration cfg) { _cs = cs; _cfg = cfg; }
 
     [HttpPost("register")]
-    public IActionResult Register([FromBody] LoginDto dto)
+    public IActionResult Register(LoginDto dto)
     {
-        if (!ValidatePassword(dto.Password))
-            return BadRequest("Password is not strong enough!");
+        if (!ValidatePassword(dto.Password)) return BadRequest("Weak password");
+        using var con = new SqlConnection(_cs.Sql); con.Open();
 
-        using var con = new SqlConnection(_conString.Sql);
-        con.Open();
-
-        using (var check = con.CreateCommand())
+        using (var chk = con.CreateCommand())
         {
-            check.CommandText = "SELECT COUNT(*) FROM dbo.Users WHERE Username = @u";
-            check.Parameters.AddWithValue("@u", dto.Username);
-            var exists = (int)check.ExecuteScalar()!;
-            if (exists > 0) return BadRequest("Username already taken!");
+            chk.CommandText = "SELECT COUNT(*) FROM dbo.Users WHERE Username=@u";
+            chk.Parameters.AddWithValue("@u", dto.Username);
+            if ((int)chk.ExecuteScalar()! > 0) return BadRequest("Username taken");
         }
 
         using (var cmd = con.CreateCommand())
         {
-            cmd.CommandText = """
-                INSERT INTO dbo.Users (Username, PasswordHash)
-                VALUES (@u, @p);
-            """;
+            cmd.CommandText = "INSERT INTO dbo.Users (Username,PasswordHash) VALUES (@u,@p);";
             cmd.Parameters.AddWithValue("@u", dto.Username);
             cmd.Parameters.AddWithValue("@p", BCrypt.Net.BCrypt.HashPassword(dto.Password));
             cmd.ExecuteNonQuery();
         }
-
-        return Ok("Registration complete!");
+        return Ok("Registration Complete!");
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginDto dto)
+    public IActionResult Login(LoginDto dto)
     {
-        using var con = new SqlConnection(_conString.Sql);
-        con.Open();
-
+        using var con = new SqlConnection(_cs.Sql); con.Open();
         using var cmd = con.CreateCommand();
-        cmd.CommandText = """
-            SELECT Id, PasswordHash
-            FROM dbo.Users
-            WHERE Username = @u
-        """;
+        cmd.CommandText = "SELECT Id,PasswordHash FROM dbo.Users WHERE Username=@u";
         cmd.Parameters.AddWithValue("@u", dto.Username);
-
-        using var reader = cmd.ExecuteReader();
-        if (!reader.Read()) return Unauthorized();
-
-        var id = reader.GetInt32(0);
-        var hash = reader.GetString(1);
-
-        if (!BCrypt.Net.BCrypt.Verify(dto.Password, hash))
-            return Unauthorized();
-
-        var token = GenerateJwt(id);
-        return Ok(new { token });
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return Unauthorized();
+        var id = r.GetInt32(0);
+        var hash = r.GetString(1);
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, hash)) return Unauthorized();
+        return Ok(new { token = GenerateJwt(id) });
     }
 
     string GenerateJwt(int userId)
     {
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var jwt = new JwtSecurityToken(
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(1),
-            signingCredentials: creds);
-
+        var jwt = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddDays(1), signingCredentials: creds);
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
     static bool ValidatePassword(string p) =>
-        p.Length >= 10 &&
-        p.Any(char.IsLower) &&
-        p.Any(char.IsUpper) &&
-        p.Any(char.IsDigit) &&
-        p.Any(ch => !char.IsLetterOrDigit(ch));
+        p.Length >= 10 && p.Any(char.IsLower) && p.Any(char.IsUpper) && p.Any(char.IsDigit) && p.Any(ch => !char.IsLetterOrDigit(ch));
 }
