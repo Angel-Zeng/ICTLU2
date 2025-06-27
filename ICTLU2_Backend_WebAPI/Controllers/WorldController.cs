@@ -23,7 +23,7 @@ public class WorldsController : ControllerBase
     public IActionResult MyWorlds()
     {
         var list = new List<World>();
-        using var con = new SqliteConnection(_cs.Sqlite);
+        using var con = new SqliteConnection(_cs.DefaultConnection);
         con.Open();
         using var cmd = con.CreateCommand();
         cmd.CommandText = "SELECT Id, Name, Width, Height FROM Worlds WHERE UserId = @uid";
@@ -41,7 +41,7 @@ public class WorldsController : ControllerBase
     //"objects": { "id": 10, "type": "red_Pikmin", "x": 12.5, "y": 6.2 },
     public IActionResult GetWorld(int id)
     {
-        using var con = new SqliteConnection(_cs.Sqlite);
+        using var con = new SqliteConnection(_cs.DefaultConnection);
         con.Open();
         using var cmd = con.CreateCommand();
         cmd.CommandText = "SELECT Name, Width, Height FROM Worlds WHERE Id = @id AND UserId = @uid";
@@ -71,7 +71,7 @@ public class WorldsController : ControllerBase
         if (dto.Width is < 20 or > 200) return BadRequest("Width out of range");
         if (dto.Height is < 10 or > 100) return BadRequest("Height out of range");
 
-        using var con = new SqliteConnection(_cs.Sqlite);
+        using var con = new SqliteConnection(_cs.DefaultConnection);
         con.Open();
         // Checking if the user already has 5 worlds or if the world name already exists. 
         using (var check = con.CreateCommand())
@@ -100,7 +100,7 @@ public class WorldsController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        using var con = new SqliteConnection(_cs.Sqlite);
+        using var con = new SqliteConnection(_cs.DefaultConnection);
         con.Open();
         using var cmd = con.CreateCommand();
         cmd.CommandText = "DELETE FROM Worlds WHERE Id=@id AND UserId=@uid";
@@ -114,7 +114,7 @@ public class WorldsController : ControllerBase
     // Checks if the world exists and belongs to the user, then checks if the object is within bounds of the world. 
     public IActionResult AddObject(int id, [FromBody] ObjectCreateDto dto)
     {
-        using var con = new SqliteConnection(_cs.Sqlite);
+        using var con = new SqliteConnection(_cs.DefaultConnection);
         con.Open();
         // Verify world and bounds
         using (var worldCmd = con.CreateCommand())

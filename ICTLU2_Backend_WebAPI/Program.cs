@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -23,8 +23,8 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
 
 builder.Services.AddAuthorization();
 
-var connStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=game.db"; // fallback for demo
-builder.Services.AddSingleton(new ConnectionStrings { Sqlite = connStr });
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton(new ConnectionStrings { DefaultConnection = connStr });
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -68,38 +68,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 
-InitDatabase(connStr);
-
 app.Run();
 
-static void InitDatabase(string cs)
-{
-    using var con = new SqliteConnection(cs);
-    con.Open();
-    var cmd = con.CreateCommand();
-    cmd.CommandText = @"
-    CREATE TABLE IF NOT EXISTS Users (
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username TEXT NOT NULL UNIQUE,
-        PasswordHash TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS Worlds (
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT NOT NULL,
-        Width INTEGER NOT NULL,
-        Height INTEGER NOT NULL,
-        UserId INTEGER NOT NULL,
-        FOREIGN KEY(UserId) REFERENCES Users(Id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS WorldObjects (
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Type TEXT NOT NULL,
-        X REAL NOT NULL,
-        Y REAL NOT NULL,
-        WorldId INTEGER NOT NULL,
-        FOREIGN KEY(WorldId) REFERENCES Worlds(Id) ON DELETE CASCADE
-    );";
-    cmd.ExecuteNonQuery();
-}
 
-public record ConnectionStrings { public string Sqlite { get; init; } = string.Empty; }
+public record ConnectionStrings { public string DefaultConnection { get; init; } = string.Empty; }
