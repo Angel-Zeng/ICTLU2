@@ -27,10 +27,10 @@ jobs:
         run: ls -R 
     
       - name: Build with dotnet
-        run: dotnet build ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.sln --configuration Release
+        run: dotnet build ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.sln --configuration Release 
+        run: dotnet publish ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release --output ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
