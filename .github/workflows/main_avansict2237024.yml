@@ -21,13 +21,16 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: '8.0'
 
+      - name: debug list repofiles 
+        run: ls -R 
+    
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release --output ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
