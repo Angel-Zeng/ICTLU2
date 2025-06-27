@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ICTLU2_Backend_WebAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aceb6b1513de42903c574b67082923b2097c6855")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3ec058eef3a4d6560995b7f81da24a0a6429f489")]
 [assembly: System.Reflection.AssemblyProductAttribute("ICTLU2_Backend_WebAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ICTLU2_Backend_WebAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
