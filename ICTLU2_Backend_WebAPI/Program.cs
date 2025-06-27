@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load user‑secrets in dev automatically (SDK ≥ 6.0 does this when project has <UserSecretsId>)
-// Nothing extra to code.
-
 // JWT auth
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("Jwt key missing");
 
@@ -26,7 +23,6 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
 
 builder.Services.AddAuthorization();
 
-// Expose connection string via DI
 var connStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=game.db"; // fallback for demo
 builder.Services.AddSingleton(new ConnectionStrings { Sqlite = connStr });
 
@@ -71,7 +67,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// 🔧 On first run, create tables if they don’t exist
+
 InitDatabase(connStr);
 
 app.Run();
