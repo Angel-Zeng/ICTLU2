@@ -1,74 +1,96 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// JWT auth
+// ─────────────────────────────────────────────────────────────────────
+//  Authentication & Authorization
+// ─────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("Jwt key missing");
 
-builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
-{
-    opt.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", opt =>
     {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-    };
-});
+        opt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
 
 builder.Services.AddAuthorization();
 
-var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddSingleton(new ConnectionStrings { DefaultConnection = connStr });
+// ─────────────────────────────────────────────────────────────────────
+//  Connection string via DI
+// ─────────────────────────────────────────────────────────────────────
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
+              ?? throw new Exception("Missing connection string");
+builder.Services.AddSingleton(new ConnectionStrings { Sql = connStr });
 
+// ─────────────────────────────────────────────────────────────────────
+//  MVC / Controllers
+// ─────────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
+
+// ─────────────────────────────────────────────────────────────────────
+//  Swagger + JWT security definition
+// ─────────────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    // Basic doc info (optional)
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter your JWT token like this: Bearer <your_token_here>"
+        Title = "WorldBuilder API",
+        Version = "v1"
     });
 
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    // Add the Bearer scheme
+    var jwtScheme = new OpenApiSecurityScheme
     {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
-        }
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token like this: **Bearer &lt;your_token_here&gt;**"
+    };
+    options.AddSecurityDefinition("Bearer", jwtScheme);
+
+    // Make every operation require that scheme (unless [AllowAnonymous])
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { jwtScheme, Array.Empty<string>() }
     });
 });
 
+// ─────────────────────────────────────────────────────────────────────
+//  Pipeline
+// ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
-
-
 app.Run();
 
-
-public record ConnectionStrings { public string DefaultConnection { get; init; } = string.Empty; }
+public record ConnectionStrings
+{
+    public string Sql { get; init; } = string.Empty;
+}
