@@ -21,16 +21,13 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '9.0'
 
-      - name: debug list repofiles 
-        run: ls -R 
-    
       - name: Build with dotnet
-        run: dotnet build ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release
+        run: dotnet build --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish ICTLU2_Backend_WebAPI/ICTLU2_Backend_WebAPI.csproj --configuration Release --output ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -54,9 +51,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_AB7BF5331F7D42D3BD0EFA278920E8B9 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F3BB9C43980D4A58A948A37427D84521 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EE3391006E9740079A73426203F1BFBB }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_79DAF987F3724CCF8F15CA021EAA1542 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_7E260407382E40F691F98B65FF9EEDE0 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_70A5BB4ADB3846A59456F90EBB85771E }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
