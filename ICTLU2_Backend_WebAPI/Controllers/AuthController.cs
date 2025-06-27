@@ -4,7 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using ICTLU2_Backend_WebAPI.DTO;
 using ICTLU2_Backend_WebAPI.Models;
+
 
 namespace ICTLU2_Backend_WebAPI.Controllers;
 
@@ -91,6 +93,4 @@ public class AuthController : ControllerBase
     // A special character.
     static bool ValidatePassword(string p) =>
         p.Length >= 10 && p.Any(char.IsLower) && p.Any(char.IsUpper) && p.Any(char.IsDigit) && p.Any(ch => !char.IsLetterOrDigit(ch));
-
-    public record LoginDto(string Username, string Password);
 }

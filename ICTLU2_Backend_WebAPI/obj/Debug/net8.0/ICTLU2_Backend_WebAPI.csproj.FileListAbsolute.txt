@@ -1,0 +1,8 @@
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.csproj.AssemblyReference.cache
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.AssemblyInfoInputs.cache
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.AssemblyInfo.cs
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.csproj.CoreCompileInputs.cache
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\angel\Avans\1.3_LU2\ICTLU2\ICTLU2_Backend_WebAPI\obj\Debug\net8.0\ICTLU2_Backend_WebAPI.sourcelink.json

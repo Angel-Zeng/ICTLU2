@@ -1,6 +1,4 @@
 ﻿namespace ICTLU2_Backend_WebAPI.DTO
 {
-    public class LoginDTO
-    {
-    }
+    public record LoginDto(string Username, string Password);
 }
