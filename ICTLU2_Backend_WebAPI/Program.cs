@@ -1,11 +1,11 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ─── JWT Auth ───────────────────────────────────────────────────
+// ─── JWT Auth ─────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new("Jwt key missing");
 
 builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
@@ -19,18 +19,20 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
+
 builder.Services.AddAuthorization();
 
-// ─── Connection string via DI ───────────────────────────────────
+// ─── Connection string via DI ─────────────────────────────────
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
               ?? throw new("Missing connection string");
+
 builder.Services.AddSingleton(new ConnectionStrings { Sql = connStr });
 
-// ─── Controllers ────────────────────────────────────────────────
+// ─── Controllers & Swagger ───────────────────────────────────
 builder.Services.AddControllers();
 
-// ─── Swagger + Bearer support ──────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(o =>
 {
     o.SwaggerDoc("v1", new OpenApiInfo { Title = "WorldBuilder API", Version = "v1" });
@@ -42,12 +44,15 @@ builder.Services.AddSwaggerGen(o =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Paste token: **Bearer &lt;token&gt;**"
+        Description = "Paste token: **Bearer <token>**"
     };
     o.AddSecurityDefinition("Bearer", jwtScheme);
     o.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() }
+        { new OpenApiSecurityScheme {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>() }
     });
 });
 

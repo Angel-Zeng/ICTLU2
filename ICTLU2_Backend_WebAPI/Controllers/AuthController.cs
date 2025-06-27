@@ -11,50 +11,48 @@ namespace ICTLU2_Backend_WebAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(ConnectionStrings cs, IConfiguration cfg) : ControllerBase
 {
-    private readonly ConnectionStrings _cs;
-    private readonly IConfiguration _cfg;
-    public AuthController(ConnectionStrings cs, IConfiguration cfg) { _cs = cs; _cfg = cfg; }
+    readonly ConnectionStrings _cs = cs;
+    readonly IConfiguration _cfg = cfg;
 
+    // ────────────────────────────────────────── REGISTER ───────
     [HttpPost("register")]
     public IActionResult Register(LoginDto dto)
     {
         if (!ValidatePassword(dto.Password)) return BadRequest("Weak password");
+
         using var con = new SqlConnection(_cs.Sql); con.Open();
+        using var chk = new SqlCommand("SELECT COUNT(*) FROM dbo.Users WHERE Username=@u", con);
+        chk.Parameters.AddWithValue("@u", dto.Username);
+        if ((int)chk.ExecuteScalar()! > 0) return BadRequest("Username taken");
 
-        using (var chk = con.CreateCommand())
-        {
-            chk.CommandText = "SELECT COUNT(*) FROM dbo.Users WHERE Username=@u";
-            chk.Parameters.AddWithValue("@u", dto.Username);
-            if ((int)chk.ExecuteScalar()! > 0) return BadRequest("Username taken");
-        }
-
-        using (var cmd = con.CreateCommand())
-        {
-            cmd.CommandText = "INSERT INTO dbo.Users (Username,PasswordHash) VALUES (@u,@p);";
-            cmd.Parameters.AddWithValue("@u", dto.Username);
-            cmd.Parameters.AddWithValue("@p", BCrypt.Net.BCrypt.HashPassword(dto.Password));
-            cmd.ExecuteNonQuery();
-        }
-        return Ok("Registration Complete!");
+        using var cmd = new SqlCommand("INSERT INTO dbo.Users (Username,PasswordHash) VALUES (@u,@p);", con);
+        cmd.Parameters.AddWithValue("@u", dto.Username);
+        cmd.Parameters.AddWithValue("@p", BCrypt.Net.BCrypt.HashPassword(dto.Password));
+        cmd.ExecuteNonQuery();
+        return Ok("Registration complete");
     }
 
+    // ───────────────────────────────────────────── LOGIN ───────
     [HttpPost("login")]
     public IActionResult Login(LoginDto dto)
     {
         using var con = new SqlConnection(_cs.Sql); con.Open();
-        using var cmd = con.CreateCommand();
-        cmd.CommandText = "SELECT Id,PasswordHash FROM dbo.Users WHERE Username=@u";
+
+        using var cmd = new SqlCommand("SELECT Id,PasswordHash FROM dbo.Users WHERE Username=@u", con);
         cmd.Parameters.AddWithValue("@u", dto.Username);
         using var r = cmd.ExecuteReader();
         if (!r.Read()) return Unauthorized();
+
         var id = r.GetInt32(0);
         var hash = r.GetString(1);
         if (!BCrypt.Net.BCrypt.Verify(dto.Password, hash)) return Unauthorized();
+
         return Ok(new { token = GenerateJwt(id) });
     }
 
+    // ──────────────────────────────────────────── HELPERS ──────
     string GenerateJwt(int userId)
     {
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
