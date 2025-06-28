@@ -6,7 +6,8 @@ using Microsoft.Data.SqlClient;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── JWT Auth ─────────────────────────────────────────────────
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new("Jwt key missing");
+
+var jwtKey = builder.Configuration["Jwt__Key"] ?? throw new("Jwt key missing");
 
 builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
 {
