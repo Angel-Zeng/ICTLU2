@@ -1,64 +1,83 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ─── JWT Auth ─────────────────────────────────────────────────
+//Jwt sleutel die mij zo enorm veel pijn gaf in azure en user secrets jemig
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new("JWT sleutel ontbreekt in configuratie");
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new("Jwt key missing");
-
-builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
-{
-    opt.TokenValidationParameters = new TokenValidationParameters
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
     {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-    };
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
 
 builder.Services.AddAuthorization();
 
-// ─── Connection string via DI ─────────────────────────────────
-var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
-              ?? throw new("Missing connection string");
+//Hetzelfde voor de connectiestring
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new("Database connectiestring ontbreekt");
 
-builder.Services.AddSingleton(new ConnectionStrings { Sql = connStr });
+builder.Services.AddSingleton(new ConnectionStrings
+{
+    Sql = connectionString
+});
 
-// ─── Controllers & Swagger ───────────────────────────────────
+// registreren van controllers
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen(o =>
+builder.Services.AddSwaggerGen(options =>
 {
-    o.SwaggerDoc("v1", new OpenApiInfo { Title = "WorldBuilder API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Virtual Daycare API",
+        Version = "v1"
+    });
 
-    var jwtScheme = new OpenApiSecurityScheme
+    // Dit toegevoegd zodat er met de token geauthentificeerd kon worden in Swagger UI
+    var securityScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Paste token: **Bearer <token>**"
+        Description = "JWT Authorization header: Bearer <token>"
     };
-    o.AddSecurityDefinition("Bearer", jwtScheme);
-    o.AddSecurityRequirement(new OpenApiSecurityRequirement
+
+    options.AddSecurityDefinition("Bearer", securityScheme);
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        { new OpenApiSecurityScheme {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
             },
-            Array.Empty<string>() }
+            Array.Empty<string>()
+        }
     });
 });
 
+//bouweeennnn
 var app = builder.Build();
 
+//configueren van hhtp request pipelines
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -71,4 +90,8 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-public record ConnectionStrings { public string Sql { get; init; } = string.Empty; }
+//had ik in een andere file willen zetten maar iemand zei dat het niet werkt met azure
+public record ConnectionStrings
+{
+    public string Sql { get; init; } = string.Empty;
+};

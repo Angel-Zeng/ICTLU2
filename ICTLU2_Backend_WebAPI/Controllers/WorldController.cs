@@ -10,156 +10,236 @@ namespace ICTLU2_Backend_WebAPI.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class WorldsController(ConnectionStrings cs) : ControllerBase
+public class WorldsController(ConnectionStrings conString) : ControllerBase
 {
-    readonly ConnectionStrings _cs = cs;
+    private readonly ConnectionStrings _conString = conString;
 
-    int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+   //Haalt de gebruiker id
+    private int UserId => int.Parse(
+        User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    // ───── GET api/worlds ──────────────────────────────────────
+    //Werelden van de gebruiker ophalen 
     [HttpGet]
-    public IActionResult MyWorlds()
+    public IActionResult GetUserWorlds()
     {
-        var list = new List<World>();
-        using var con = new SqlConnection(_cs.Sql); con.Open();
-        using var cmd = new SqlCommand("SELECT Id,Name,Width,Height FROM Worlds WHERE UserId=@uid", con);
-        cmd.Parameters.AddWithValue("@uid", UserId);
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-            list.Add(new World(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetInt32(3)));
-        return Ok(list);
-    }
+        var worlds = new List<World>();
 
-    // ───── POST api/worlds ─────────────────────────────────────
-    [HttpPost]
-    // POST api/worlds
-    [HttpPost]
-    public IActionResult Create(WorldCreateDto dto)
-    {
-        if (dto.Name.Length is < 1 or > 25) return BadRequest("Name length invalid");
-        if (dto.Width is < 20 or > 200) return BadRequest("Width out of range");
-        if (dto.Height is < 10 or > 100) return BadRequest("Height out of range");
-
-        using var con = new SqlConnection(_cs.Sql);
+        using var con = new SqlConnection(_conString.Sql);
         con.Open();
 
-        // one short transaction guarantees we never hand out the same Id twice
-        using var tx = con.BeginTransaction();
+        using var cmd = new SqlCommand(
+            "SELECT Id, Name, Width, Height " +
+            "FROM Worlds WHERE UserId = @uid",
+            con);
 
-        // max-5-worlds & unique name
-        {
-            using var chk = new SqlCommand(
-                "SELECT COUNT(*) FROM Worlds WHERE UserId=@uid", con, tx);
-            chk.Parameters.AddWithValue("@uid", UserId);
-            if ((int)chk.ExecuteScalar()! >= 5) return BadRequest("Max 5 worlds reached");
-        }
-        {
-            using var dup = new SqlCommand(
-                "SELECT COUNT(*) FROM Worlds WHERE UserId=@uid AND Name=@n", con, tx);
-            dup.Parameters.AddWithValue("@uid", UserId);
-            dup.Parameters.AddWithValue("@n", dto.Name);
-            if ((int)dup.ExecuteScalar()! > 0) return BadRequest("Name already in use");
-        }
+        cmd.Parameters.AddWithValue("@uid", UserId);
 
-        // next sequential Id for THIS user
-        int nextId;
-        {
-            using var max = new SqlCommand(
-                "SELECT ISNULL(MAX(Id),0)+1 FROM Worlds WITH (UPDLOCK, HOLDLOCK) WHERE UserId=@uid",
-                con, tx);
-            max.Parameters.AddWithValue("@uid", UserId);
-            nextId = (int)max.ExecuteScalar()!;
-        }
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            worlds.Add(new World(
+                r.GetInt32(0),
+                r.GetString(1),
+                r.GetInt32(2),
+                r.GetInt32(3)));
 
-        // insert with explicit Id
-        {
-            using var ins = new SqlCommand(
-                @"INSERT INTO Worlds (UserId, Id, Name, Width, Height)
-              VALUES (@uid, @id, @n, @w, @h);",
-                con, tx);
-            ins.Parameters.AddWithValue("@uid", UserId);
-            ins.Parameters.AddWithValue("@id", nextId);
-            ins.Parameters.AddWithValue("@n", dto.Name);
-            ins.Parameters.AddWithValue("@w", dto.Width);
-            ins.Parameters.AddWithValue("@h", dto.Height);
-            ins.ExecuteNonQuery();
-        }
-
-        tx.Commit();
-        return CreatedAtAction(nameof(GetWorld), new { id = nextId }, new { id = nextId });
+        return Ok(worlds);
     }
 
-    // ───── GET api/worlds/{id} ─────────────────────────────────
+    //Maken van nieuwe werelden
+    [HttpPost]
+    public IActionResult CreateWorld(WorldCreateDto dto)
+    {
+        // Valideer invoer
+        if (dto.Name.Length is < 1 or > 25)
+            return BadRequest("Naam moet tussen 1-25 tekens zijn");
+
+        if (dto.Width is < 20 or > 200)
+            return BadRequest("Breedte moet tussen 20-200 zijn");
+
+        if (dto.Height is < 10 or > 100)
+            return BadRequest("Hoogte moet tussen 10-100 zijn");
+
+        using var con = new SqlConnection(_conString.Sql);
+        con.Open();
+
+        //starten van een transactie omdat we meerdere queries uitvoeren
+        using var tx = con.BeginTransaction();
+
+        try
+        {
+            //Max 5 werelden per gebruiker
+            using var countCmd = new SqlCommand(
+                "SELECT COUNT(*) FROM Worlds WHERE UserId = @uid",
+                con, tx);
+
+            countCmd.Parameters.AddWithValue("@uid", UserId);
+            if ((int)countCmd.ExecuteScalar()! >= 5)
+                return BadRequest("Maximaal 5 werelden per gebruiker");
+
+            //Mag niet dezelfde naam gebruiken
+            using var nameCmd = new SqlCommand(
+                "SELECT COUNT(*) FROM Worlds " +
+                "WHERE UserId = @uid AND Name = @name",
+                con, tx);
+
+            nameCmd.Parameters.AddWithValue("@uid", UserId);
+            nameCmd.Parameters.AddWithValue("@name", dto.Name);
+
+            if ((int)nameCmd.ExecuteScalar()! > 0)
+                return BadRequest("Wereldnaam bestaat al");
+
+            //Elke wereld een unieke id geven
+            int newId;
+            using var idCmd = new SqlCommand(
+                "SELECT ISNULL(MAX(Id), 0) + 1 " +
+                "FROM Worlds WHERE UserId = @uid",
+                con, tx);
+
+            idCmd.Parameters.AddWithValue("@uid", UserId);
+            newId = (int)idCmd.ExecuteScalar()!;
+
+            //De wereld toevoegen aan de database
+            using var insertCmd = new SqlCommand(
+                @"INSERT INTO Worlds (UserId, Id, Name, Width, Height)
+                VALUES (@uid, @id, @name, @width, @height);",
+                con, tx);
+
+            insertCmd.Parameters.AddWithValue("@uid", UserId);
+            insertCmd.Parameters.AddWithValue("@id", newId);
+            insertCmd.Parameters.AddWithValue("@name", dto.Name);
+            insertCmd.Parameters.AddWithValue("@width", dto.Width);
+            insertCmd.Parameters.AddWithValue("@height", dto.Height);
+            insertCmd.ExecuteNonQuery();
+
+            tx.Commit();
+            return CreatedAtAction(
+                nameof(GetWorld),
+                new { id = newId },
+                new { id = newId });
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
+    //Ophalen van een specifieke wereld
     [HttpGet("{id}")]
     public IActionResult GetWorld(int id)
     {
-        using var con = new SqlConnection(_cs.Sql); con.Open();
+        using var con = new SqlConnection(_conString.Sql);
+        con.Open();
 
-        string name; int width, height;
-        using (var cmd = new SqlCommand("SELECT Name,Width,Height FROM Worlds WHERE Id=@id AND UserId=@uid", con))
+        //Ophalen van de wereldgegevens
+        World world;
+        using (var worldCmd = new SqlCommand(
+            "SELECT Name, Width, Height " +
+            "FROM Worlds WHERE Id = @id AND UserId = @uid",
+            con))
         {
-            cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@uid", UserId);
-            using var r = cmd.ExecuteReader();
-            if (!r.Read()) return NotFound();
-            name = r.GetString(0);
-            width = r.GetInt32(1);
-            height = r.GetInt32(2);
-        }
-        var world = new World(id, name, width, height);
+            worldCmd.Parameters.AddWithValue("@id", id);
+            worldCmd.Parameters.AddWithValue("@uid", UserId);
 
+            using var r = worldCmd.ExecuteReader();
+            if (!r.Read())
+                return NotFound("Wereld niet gevonden");
+
+            world = new World(
+                id,
+                r.GetString(0),
+                r.GetInt32(1),
+                r.GetInt32(2));
+        }
+
+        //ophalen van de objecten die in de wereld zitten
         var objects = new List<WorldObject>();
-        using (var oCmd = new SqlCommand("SELECT Id,Type,X,Y FROM WorldObjects WHERE WorldId=@wid", con))
+        using (var objCmd = new SqlCommand(
+            "SELECT Id, Type, X, Y " +
+            "FROM WorldObjects WHERE WorldId = @worldId",
+            con))
         {
-            oCmd.Parameters.AddWithValue("@wid", id);
-            using var ro = oCmd.ExecuteReader();
+            objCmd.Parameters.AddWithValue("@worldId", id);
+
+            using var ro = objCmd.ExecuteReader();
             while (ro.Read())
-                objects.Add(new WorldObject(ro.GetInt32(0), ro.GetString(1), (float)ro.GetDouble(2), (float)ro.GetDouble(3)));
+                objects.Add(new WorldObject(
+                    ro.GetInt32(0),
+                    ro.GetString(1),
+                    (float)ro.GetDouble(2),
+                    (float)ro.GetDouble(3)));
         }
+
         return Ok(new { world, objects });
     }
 
-    // ───── DELETE api/worlds/{id} ──────────────────────────────
+    //Verwijderen!
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public IActionResult DeleteWorld(int id)
     {
-        using var con = new SqlConnection(_cs.Sql); con.Open();
-        using var cmd = new SqlCommand("DELETE FROM Worlds WHERE Id=@id AND UserId=@uid", con);
+        using var con = new SqlConnection(_conString.Sql);
+        con.Open();
+
+        using var cmd = new SqlCommand(
+            "DELETE FROM Worlds " +
+            "WHERE Id = @id AND UserId = @uid",
+            con);
+
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@uid", UserId);
-        return cmd.ExecuteNonQuery() == 0 ? NotFound() : Ok("Succesfully deleted!");
+
+        int affected = cmd.ExecuteNonQuery();
+        return affected == 0
+            ? NotFound("Wereld niet gevonden")
+            : Ok("Wereld succesvol verwijderd");
     }
 
-    // ───── POST api/worlds/{id}/objects ────────────────────────
+    //objecten toevoegen aan wereld 
     [HttpPost("{id}/objects")]
-    public IActionResult AddObject(int id, ObjectCreateDto dto)
+    public IActionResult AddObjectToWorld(int id, ObjectCreateDto dto)
     {
-        using var con = new SqlConnection(_cs.Sql); con.Open();
+        using var con = new SqlConnection(_conString.Sql);
+        con.Open();
 
-        // check user owns world and bounds
-        using (var w = new SqlCommand(
-            "SELECT Width,Height FROM Worlds WHERE UserId=@uid AND Id=@id", con))
+        //De wereld grenzen ophalen
+        int width, height;
+        using (var boundsCmd = new SqlCommand(
+            "SELECT Width, Height FROM Worlds " +
+            "WHERE UserId = @uid AND Id = @id",
+            con))
         {
-            w.Parameters.AddWithValue("@uid", UserId);
-            w.Parameters.AddWithValue("@id", id);
-            using var r = w.ExecuteReader();
-            if (!r.Read()) return NotFound();
-            if (dto.X > r.GetInt32(0) || dto.Y > r.GetInt32(1))
-                return BadRequest("Object outside bounds");
+            boundsCmd.Parameters.AddWithValue("@uid", UserId);
+            boundsCmd.Parameters.AddWithValue("@id", id);
+
+            using var r = boundsCmd.ExecuteReader();
+            if (!r.Read())
+                return NotFound("Wereld niet gevonden");
+
+            width = r.GetInt32(0);
+            height = r.GetInt32(1);
         }
 
-        int objId;
-        using (var cmd = new SqlCommand(
-            "INSERT INTO WorldObjects (UserId,WorldId,Type,X,Y) " +
-            "VALUES (@uid,@wid,@t,@x,@y); SELECT SCOPE_IDENTITY();", con))
+        //valideren van object invoer of die binnen de wereld past
+        if (dto.X > width || dto.Y > height)
+            return BadRequest("Object valt buiten wereldgrenzen");
+
+        //objectentoevoegen 
+        int newObjId;
+        using (var insertCmd = new SqlCommand(
+            "INSERT INTO WorldObjects (UserId, WorldId, Type, X, Y) " +
+            "VALUES (@uid, @worldId, @type, @x, @y); " +
+            "SELECT SCOPE_IDENTITY();",
+            con))
         {
-            cmd.Parameters.AddWithValue("@uid", UserId);
-            cmd.Parameters.AddWithValue("@wid", id);
-            cmd.Parameters.AddWithValue("@t", dto.Type);
-            cmd.Parameters.AddWithValue("@x", dto.X);
-            cmd.Parameters.AddWithValue("@y", dto.Y);
-            objId = Convert.ToInt32(cmd.ExecuteScalar());
+            insertCmd.Parameters.AddWithValue("@uid", UserId);
+            insertCmd.Parameters.AddWithValue("@worldId", id);
+            insertCmd.Parameters.AddWithValue("@type", dto.Type);
+            insertCmd.Parameters.AddWithValue("@x", dto.X);
+            insertCmd.Parameters.AddWithValue("@y", dto.Y);
+
+            newObjId = Convert.ToInt32(insertCmd.ExecuteScalar());
         }
-        return Ok(new { objId });
+
+        return Ok(new { objectId = newObjId });
     }
 }
