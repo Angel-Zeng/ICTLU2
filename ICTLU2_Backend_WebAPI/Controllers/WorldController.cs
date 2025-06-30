@@ -201,7 +201,7 @@ public class WorldsController(ConnectionStrings conString) : ControllerBase
         using var con = new SqlConnection(_conString.Sql);
         con.Open();
 
-        //De wereld grenzen ophalen
+        //De wereld ophalen
         int width, height;
         using (var boundsCmd = new SqlCommand(
             "SELECT Width, Height FROM Worlds " +
