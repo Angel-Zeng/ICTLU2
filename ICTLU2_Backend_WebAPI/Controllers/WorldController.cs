@@ -15,7 +15,7 @@ public class WorldsController(ConnectionStrings conString) : ControllerBase
     private readonly ConnectionStrings _conString = conString;
 
    //Haalt de gebruiker id
-    private int UserId => int.Parse(
+    public int UserId => int.Parse(
         User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
     //Werelden van de gebruiker ophalen 

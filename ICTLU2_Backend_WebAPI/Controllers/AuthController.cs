@@ -97,7 +97,7 @@ public class AuthController(ConnectionStrings conString, IConfiguration conFig) 
     }
 
     //valideren van wachtwoord
-    private static bool ValidatePassword(string password) =>
+    public static bool ValidatePassword(string password) =>
         password.Length >= 10 &&
         password.Any(char.IsLower) &&
         password.Any(char.IsUpper) &&
