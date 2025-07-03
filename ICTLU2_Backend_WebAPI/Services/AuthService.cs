@@ -4,6 +4,7 @@ using ICTLU2_Backend_WebAPI.Models;
 
 namespace ICTLU2_Backend_WebAPI.Services;
 
+// Heb deze toegevoegd omdat Marc vond dat er te veel code in the Controllers stonden. 
 public class AuthService(ConnectionStrings conString) : IAuthService
 {
     private readonly string _connectionString = conString.Sql;
@@ -16,13 +17,13 @@ public class AuthService(ConnectionStrings conString) : IAuthService
         await using var con = new SqlConnection(_connectionString);
         await con.OpenAsync();
 
-        // Username exists check
+        // Kijken of de gebruiker al bestaat 
         var checkCmd = new SqlCommand("SELECT COUNT(*) FROM dbo.Users WHERE Username=@username", con);
         checkCmd.Parameters.AddWithValue("@username", dto.Username);
         if ((int)await checkCmd.ExecuteScalarAsync()! > 0)
             throw new ArgumentException("Gebruikersnaam is al in gebruik");
 
-        // Create user
+        // Maken van een nieuwe gebruiker
         var createCmd = new SqlCommand(
             "INSERT INTO dbo.Users (Username, PasswordHash) VALUES (@username, @password);",
             con);
@@ -34,6 +35,7 @@ public class AuthService(ConnectionStrings conString) : IAuthService
         return "Registratie succesvol";
     }
 
+    //Inloggen van een gebruiker
     public async Task<string> LoginUserAsync(LoginDto dto)
     {
         await using var con = new SqlConnection(_connectionString);
@@ -58,6 +60,7 @@ public class AuthService(ConnectionStrings conString) : IAuthService
         return id.ToString();
     }
 
+    //Kijken of het wachtwoord wel aan de eisen voldoet. 
     private static bool ValidatePassword(string password) =>
         password.Length >= 10 &&
         password.Any(char.IsLower) &&

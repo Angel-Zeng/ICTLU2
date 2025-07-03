@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace ICTLU2_Backend_WebAPI.Controllers;
 
-// 
+// Alle endpoints die te maken hebben met werelden van een user. Werken alleen als de user ingelogd is. 
 
 [ApiController]
 [Route("api/[controller]")]
@@ -14,14 +14,18 @@ namespace ICTLU2_Backend_WebAPI.Controllers;
 public class WorldsController(IWorldService worldService) : ControllerBase
 {
     private readonly IWorldService _worldService = worldService;
+
+    //Haalt user id uit de token, dit zorgrt er dus voor dat alles alleen werkt als je ingelogd bent. 
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
+    //Ophalen van de werelden van een user
     [HttpGet]
     public async Task<IActionResult> GetUserWorlds()
     {
         return Ok(await _worldService.GetUserWorldsAsync(UserId));
     }
 
+    //Het maken van werelden
     [HttpPost]
     public async Task<IActionResult> CreateWorld(WorldCreateDto dto)
     {
@@ -39,6 +43,7 @@ public class WorldsController(IWorldService worldService) : ControllerBase
         }
     }
 
+    //haalt specifieke werelden op met objecten
     [HttpGet("{id}")]
     public async Task<IActionResult> GetWorld(int id)
     {
@@ -52,6 +57,8 @@ public class WorldsController(IWorldService worldService) : ControllerBase
             return NotFound(ex.Message);
         }
     }
+
+    //verwijdert werelden op basis van wereldid
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteWorld(int id)
@@ -67,6 +74,7 @@ public class WorldsController(IWorldService worldService) : ControllerBase
         }
     }
 
+    //toevoegen van objecten aan een wereld
     [HttpPost("{id}/objects")]
     public async Task<IActionResult> AddObjectToWorld(int id, ObjectCreateDto dto)
     {
