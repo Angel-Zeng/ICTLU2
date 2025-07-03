@@ -128,10 +128,11 @@ public class WorldService(ConnectionStrings conString) : IWorldService
         // Objecten krijgen
         var objects = new List<WorldObject>();
         var objCmd = new SqlCommand(
-            "SELECT Id, Type, X, Y FROM WorldObjects WHERE WorldId = @worldId",
+            "SELECT Id, Type, X, Y FROM WorldObjects WHERE WorldId = @worldId AND UserId = @uid",
             con);
 
         objCmd.Parameters.AddWithValue("@worldId", worldId);
+        objCmd.Parameters.AddWithValue("@uid", userId);
         using var ro = await objCmd.ExecuteReaderAsync();
 
         while (await ro.ReadAsync())
