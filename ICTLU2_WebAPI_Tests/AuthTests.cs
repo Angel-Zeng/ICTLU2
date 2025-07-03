@@ -25,7 +25,7 @@ namespace ICTLU2_WebAPI_Tests
 
             var controller = new AuthController(connectionStrings, configuration);
 
-            var dto = new LoginDto
+            var dto = new IAuthService
            ("testuser", "shortpass");
 
             var result = controller.Register(dto);
@@ -46,7 +46,7 @@ namespace ICTLU2_WebAPI_Tests
                 .AddInMemoryCollection(inMemorySettings)
                 .Build();
 
-            var dto = new LoginDto("newuser", "ValidPass1!");
+            var dto = new IAuthService("newuser", "ValidPass1!");
 
             var controller = new TestableAuthController(connectionStrings, configuration);
             controller.SetUsernameExists(false);
@@ -68,7 +68,7 @@ namespace ICTLU2_WebAPI_Tests
                 .AddInMemoryCollection(inMemorySettings)
                 .Build();
 
-            var dto = new LoginDto("existinguser", "ValidPass1!");
+            var dto = new IAuthService("existinguser", "ValidPass1!");
 
             var controller = new TestableAuthController(connectionStrings, configuration);
             controller.SetUsernameExists(true);

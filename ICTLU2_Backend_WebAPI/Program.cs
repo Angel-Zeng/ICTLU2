@@ -1,8 +1,14 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using ICTLU2_Backend_WebAPI.Services;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Deze niet vergeten want niks werkte zonder deze regels >:(
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IWorldService, WorldService>();
+
 
 //Jwt sleutel die mij zo enorm veel pijn gaf in azure en user secrets jemig
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -90,8 +96,10 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
+
 //had ik in een andere file willen zetten maar iemand zei dat het niet werkt met azure
 public record ConnectionStrings
 {
     public string Sql { get; init; } = string.Empty;
 };
+
